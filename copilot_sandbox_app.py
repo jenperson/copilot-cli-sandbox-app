@@ -17,6 +17,7 @@ def main():
     sandbox = Sandbox.create(
         name="copilot-gradio-sandbox",
         wait_ready=True,
+        idle_timeout=0,  # Keep sandbox alive indefinitely
         env={
             "GITHUB_TOKEN": GITHUB_TOKEN,
             }
@@ -94,14 +95,12 @@ Provide only the updated app.py code.
         # Step 7: Create enhanced app.py
         # Extract Python code block from Copilot response
         copilot_response = result.stdout
-        print(f"Copilot response:\n{copilot_response}\n")
         code_match = re.search(r'```python\s*(.*?)\n?```', copilot_response, re.DOTALL)
         if code_match:
             enhanced_code = textwrap.dedent(code_match.group(1))
         else:
-            # Fallback to original code if no code block found
-            print("Warning: Could not extract code block from Copilot response, using original code")
-            enhanced_code = original_code
+            print("Error: Could not extract code block from Copilot response")
+            return
         
         print("Step 7: Writing enhanced application...")
         fs.write_file("/tmp/example-gradio/app_enhanced.py", enhanced_code)
@@ -113,7 +112,6 @@ Provide only the updated app.py code.
         process_id = sandbox.launch_process(
             "cd /tmp/example-gradio && python3 app_enhanced.py",
             cwd="/tmp",
-            env={"GRADIO_SERVER_PORT": "7860"}
         )
         domain = port.exposed_at
         print(f"✓ Gradio started (process ID: {process_id})\n")
@@ -121,8 +119,6 @@ Provide only the updated app.py code.
         # Wait for Gradio to start
         time.sleep(3)
         
-        # The Gradio app is now running on port 7860, which is automatically exposed
-        # by Koyeb at the root path (/)
         print("✓ Gradio is running on port 7860\n")
         print("📍 Your sandbox is now active with Gradio running.\n")
         print(f"Access your application through your sandbox's public URL: {domain}\n")
